@@ -34,8 +34,22 @@ func (s *stepRemoteUpload) Run(state multistep.StateBag) multistep.StepAction {
 		ui.Error(err.Error())
 		return multistep.ActionHalt
 	}
-
 	state.Put(s.Key, newPath)
+
+	floppypath := state.Get("floppy_path").(string)
+	if floppypath != ""{
+		log.Printf("Remote uploading: %s", floppypath)
+		newfloppyPath, err := remote.UploadISO(floppypath)
+		if err != nil {
+			err := fmt.Errorf("Error uploading file: %s", err)
+			state.Put("error", err)
+			ui.Error(err.Error())
+			return multistep.ActionHalt
+		}	
+		state.Put("floppy_path", newfloppyPath)
+	}
+	
+
 	return multistep.ActionContinue
 }
 

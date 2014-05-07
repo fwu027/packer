@@ -25,6 +25,7 @@ type StepCreateFloppy struct {
 func (s *StepCreateFloppy) Run(state multistep.StateBag) multistep.StepAction {
 	if len(s.Files) == 0 {
 		log.Println("No floppy files specified. Floppy disk will not be made.")
+		state.Put("floppy_path", "")
 		return multistep.ActionContinue
 	}
 

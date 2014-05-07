@@ -59,8 +59,10 @@ func (s StepCleanVMX) Run(state multistep.StateBag) multistep.StepAction {
 			if filename, ok := vmxData[filenameKey]; ok {
 				if filename == isoPath {
 					// Change the CD-ROM device back to auto-detect to eject
-					vmxData[filenameKey] = "auto detect"
+					// vmxData[filenameKey] = "auto detect"
 					vmxData[match+"devicetype"] = "cdrom-raw"
+					vmxData[match+"clientDevice"] = "TRUE"
+					vmxData[match+"startConnected"] = "FALSE"
 				}
 			}
 		}

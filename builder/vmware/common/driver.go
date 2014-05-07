@@ -47,6 +47,7 @@ type Driver interface {
 	// Get the path to the DHCP leases file for the given device.
 	DhcpLeasesPath(string) string
 
+
 	// Verify checks to make sure that this driver should function
 	// properly. This should check that all the files it will use
 	// appear to exist and so on. If everything is okay, this doesn't

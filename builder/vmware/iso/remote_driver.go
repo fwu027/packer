@@ -17,4 +17,7 @@ type RemoteDriver interface {
 
 	// Removes a VM from inventory specified by the path to the VMX given.
 	Unregister(string) error
+
+	//Upload vmx file to esxi after cleaning
+	UploadVMX(string) error
 }

@@ -15,6 +15,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"path"
 	"strings"
 	"syscall"
 	"time"
@@ -48,7 +49,10 @@ func (d *ESX5Driver) CreateDisk(diskPathLocal string, size string, typeId string
 
 func (d *ESX5Driver) IsRunning(vmxPathLocal string) (bool, error) {
 	vmxPath := filepath.Join(d.outputDir, filepath.Base(vmxPathLocal))
-	state, err := d.run(nil, "vim-cmd", "vmsvc/power.getstate", vmxPath)
+	i, j := strings.LastIndex(vmxPath, "/"), strings.LastIndex(vmxPath, path.Ext(vmxPath))
+	vm_name := vmxPath[i+1:j]
+	vmid, err := d.run(nil,"vim-cmd","vmsvc/getallvms | awk '{print $1,$2}' | grep '" + vm_name + "' | awk '{print $1}'")
+	state, err := d.run(nil, "vim-cmd", "vmsvc/power.getstate", vmid)
 	if err != nil {
 		return false, err
 	}
@@ -57,12 +61,24 @@ func (d *ESX5Driver) IsRunning(vmxPathLocal string) (bool, error) {
 
 func (d *ESX5Driver) Start(vmxPathLocal string, headless bool) error {
 	vmxPath := filepath.Join(d.outputDir, filepath.Base(vmxPathLocal))
-	return d.sh("vim-cmd", "vmsvc/power.on", vmxPath)
+	i, j := strings.LastIndex(vmxPath, "/"), strings.LastIndex(vmxPath, path.Ext(vmxPath))
+	vm_name := vmxPath[i+1:j]
+	vmid, err := d.run(nil,"vim-cmd","vmsvc/getallvms | awk '{print $1,$2}' | grep '" + vm_name + "' | awk '{print $1}'")
+	if err != nil {
+		return err
+	}
+	return d.sh("vim-cmd", "vmsvc/power.on", vmid)
 }
 
 func (d *ESX5Driver) Stop(vmxPathLocal string) error {
 	vmxPath := filepath.Join(d.outputDir, filepath.Base(vmxPathLocal))
-	return d.sh("vim-cmd", "vmsvc/power.off", vmxPath)
+	i, j := strings.LastIndex(vmxPath, "/"), strings.LastIndex(vmxPath, path.Ext(vmxPath))
+	vm_name := vmxPath[i+1:j]
+	vmid, err := d.run(nil,"vim-cmd","vmsvc/getallvms | awk '{print $1,$2}' | grep '" + vm_name + "' | awk '{print $1}'")
+	if err != nil {
+		return err
+	}
+	return d.sh("vim-cmd", "vmsvc/power.off", vmid)
 }
 
 func (d *ESX5Driver) Register(vmxPathLocal string) error {
@@ -73,21 +89,31 @@ func (d *ESX5Driver) Register(vmxPathLocal string) error {
 	return d.sh("vim-cmd", "solo/registervm", vmxPath)
 }
 
+func (d *ESX5Driver) UploadVMX(vmxPathLocal string) error {
+	vmxPath := filepath.Join(d.outputDir, filepath.Base(vmxPathLocal))
+	if err := d.upload(vmxPath, vmxPathLocal); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (d *ESX5Driver) SuppressMessages(vmxPath string) error {
 	return nil
 }
 
 func (d *ESX5Driver) Unregister(vmxPathLocal string) error {
 	vmxPath := filepath.Join(d.outputDir, filepath.Base(vmxPathLocal))
-	return d.sh("vim-cmd", "vmsvc/unregister", vmxPath)
+	i, j := strings.LastIndex(vmxPath, "/"), strings.LastIndex(vmxPath, path.Ext(vmxPath))
+	vm_name := vmxPath[i+1:j]
+	vmid, err := d.run(nil,"vim-cmd","vmsvc/getallvms | awk '{print $1,$2}' | grep '" + vm_name + "' | awk '{print $1}'")
+	if err != nil {
+		return err
+	}
+	return d.sh("vim-cmd", "vmsvc/unregister", vmid)
 }
 
 func (d *ESX5Driver) UploadISO(localPath string) (string, error) {
-	cacheRoot, _ := filepath.Abs(".")
-	targetFile, err := filepath.Rel(cacheRoot, localPath)
-	if err != nil {
-		return "", err
-	}
+	targetFile := filepath.Join("packer_cache", filepath.Base(localPath))
 
 	finalPath := d.datastorePath(targetFile)
 	if err := d.mkdir(filepath.Dir(finalPath)); err != nil {

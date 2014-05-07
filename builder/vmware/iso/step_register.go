@@ -39,6 +39,7 @@ func (s *StepRegister) Cleanup(state multistep.StateBag) {
 
 	driver := state.Get("driver").(vmwcommon.Driver)
 	ui := state.Get("ui").(packer.Ui)
+	vmxPath := state.Get("vmx_path").(string)
 
 	if remoteDriver, ok := driver.(RemoteDriver); ok {
 		ui.Say("Unregistering virtual machine...")
@@ -47,6 +48,15 @@ func (s *StepRegister) Cleanup(state multistep.StateBag) {
 		}
 
 		s.registeredPath = ""
-	}
 
+		ui.Say("Re-Registering remote VM...")
+		if err := remoteDriver.Register(vmxPath); err != nil {
+			err := fmt.Errorf("Error registering VM: %s", err)
+			state.Put("error", err)
+			ui.Error(err.Error())
+			return
+		}
+
+		s.registeredPath = vmxPath
+	}
 }
